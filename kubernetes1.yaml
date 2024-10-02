@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: PracticalTask
+spec:
+  replicas: 3  # 3 пода
+  selector:
+    matchLabels:
+      app: PracticalTask
+  template:
+    metadata:
+      labels:
+        app: PracticalTask
+    spec:
+      containers:          # Какой-то контейнер
+      - name: PracticalTask-container
+        image: PracticalTask-image:latest  
+        resources:
+          requests:
+            cpu: "500m"  # Запрашиваем 0.5 CPU для старта
+            memory: "128Mi"  # Фиксированная память
+          limits:
+            cpu: "1000m"  # Максимум 1 CPU
+            memory: "128Mi"  # Максимум 128Mi памяти
+        startupProbe:  # Проверка старта
+          httpGet:
+            path: /health  # Проверяем, готово ли приложение
+            port: 8080  # Порт, на котором слушает приложение
+          initialDelaySeconds: 10  # Ждем 10 секунд перед первой проверкой
+          periodSeconds: 5  # Каждые 5 секунд
+          failureThreshold: 3  # Удалим под, если 3 проверки неудачны
+        readinessProbe:  # Проверка готовности
+          httpGet:
+            path: /health  # Тот же путь для готовности
+            port: 8080
+          initialDelaySeconds: 5  # Проверка через 5 секунд
+          periodSeconds: 5  # Каждые 5 секунд
+          failureThreshold: 3  # Удалим под после 3 неудач
+      affinity:  # Распределение по нодам
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - PracticalTask
+            topologyKey: "kubernetes.io/hostname"  # Размещение на разных нодах
